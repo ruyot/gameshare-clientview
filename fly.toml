@@ -1,18 +1,27 @@
-app = "gameshare-signal"
+# fly.toml app configuration file generated for gameshare-clientview on 2025-07-31T23:06:48Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'gameshare-clientview'
+primary_region = 'yyz'
 
 [env]
   PORT = "8080"
 
-# keep a single instance running
-[scale]
-  min_machines = 1
-  max_machines = 1
+[build]
 
 [[services]]
+[http_service]
   internal_port = 8080
   protocol = "tcp"
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
 
-  # enforce connection limits
+  # enforce connection limits for WebSocket support
   [services.concurrency]
     type = "connections"
     soft_limit = 50    # start queueing/new conns when >50
@@ -23,4 +32,10 @@ app = "gameshare-signal"
     port = 443
   [[services.ports]]
     handlers = ["tls", "http"]
-    port = 80 
+    port = 80
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024 

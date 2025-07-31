@@ -3,12 +3,19 @@ const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = http.createServer(app);
 
 // Enable CORS for all routes
 app.use(cors());
+
+// Rate limiting for HTTP endpoints
+app.use('/api/', rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100             // max 100 HTTP calls per IP per minute
+}));
 
 // Serve static files from the current directory
 // Note: In Vercel deployment, static files are served by Vercel's static hosting
@@ -27,7 +34,21 @@ wss.on('connection', (ws, req) => {
     let sessionId = null;
     let clientType = null;
     
+    // Per-socket message rate limiting
+    let msgCount = 0;
+    const MSG_LIMIT = 500;     // 500 messages per minute per client
+    const WINDOW_MS = 60*1000; // reset every minute
+    
+    const resetCounter = () => msgCount = 0;
+    const interval = setInterval(resetCounter, WINDOW_MS);
+    
     ws.on('message', (data) => {
+        // Check rate limit
+        if (++msgCount > MSG_LIMIT) {
+            ws.close(1008, "rate limit exceeded");
+            return;
+        }
+        
         try {
             const message = JSON.parse(data.toString());
             console.log('Received message:', message);
@@ -104,6 +125,7 @@ wss.on('connection', (ws, req) => {
     
     ws.on('close', () => {
         console.log('WebSocket connection closed');
+        clearInterval(interval); // Clean up rate limit timer
         
         if (sessionId && sessions.has(sessionId)) {
             const session = sessions.get(sessionId);
@@ -158,7 +180,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const HOST = process.env.HOST || '0.0.0.0';
 
 server.listen(PORT, HOST, () => {
