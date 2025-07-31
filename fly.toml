@@ -1,0 +1,26 @@
+app = "gameshare-signal"
+
+[env]
+  PORT = "8080"
+
+# keep a single instance running
+[scale]
+  min_machines = 1
+  max_machines = 1
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  # enforce connection limits
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 50    # start queueing/new conns when >50
+    hard_limit = 100   # refuse conns when >100
+
+  [[services.ports]]
+    handlers = ["tls", "http"]  # HTTP+HTTPS
+    port = 443
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 80 
