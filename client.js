@@ -44,7 +44,11 @@ class RemoteGameShareClient {
         // Get session ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         this.sessionId = urlParams.get('session') || 'default-session';
-        this.signalingUrl = urlParams.get('signaling') || 'wss://your-signaling-server.com/signaling';
+        
+        // Build signaling URL dynamically based on current host
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const host = location.host; // "gameshare-clientview.fly.dev"
+        this.signalingUrl = `${proto}://${host}/signaling?session=${this.sessionId}`;
         
         console.log(`Connecting to session: ${this.sessionId} via ${this.signalingUrl}`);
         this.connect();
