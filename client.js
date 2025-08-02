@@ -132,7 +132,13 @@ class RemoteGameShareClient {
         const configuration = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                // Add a free TURN server for NAT traversal
+                { 
+                    urls: 'turn:relay1.expressturn.com:3478',
+                    username: 'efJBIBVW6ls6F8zEAAAF',
+                    credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA='
+                }
             ],
             iceCandidatePoolSize: 10
         };
@@ -196,6 +202,14 @@ class RemoteGameShareClient {
                 console.error('❌ WebRTC connection failed/disconnected:', this.pc.connectionState);
                 this.connected = false;
                 this.cleanupConnection();
+            }
+        };
+
+        // Handle ICE connection state changes
+        this.pc.oniceconnectionstatechange = () => {
+            console.log('ICE connection state changed:', this.pc.iceConnectionState);
+            if (this.pc.iceConnectionState === 'failed') {
+                console.error('❌ ICE connection failed - possible NAT/firewall issue');
             }
         };
 

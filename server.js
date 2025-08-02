@@ -88,24 +88,24 @@ wss.on('connection', (ws, req) => {
                 case 'offer':
                 case 'answer':
                 case 'ice-candidate':
+                    console.log(`Forwarding ${message.type} from ${clientType} in session ${sessionId}`);
                     // Forward message to other participants in the session
                     if (sessionId && sessions.has(sessionId)) {
                         const session = sessions.get(sessionId);
-                        const targetWs = clientType === 'host' ? session.clients : session.host;
                         
-                        if (targetWs) {
-                            if (Array.isArray(targetWs)) {
-                                // Multiple clients
-                                targetWs.forEach(client => {
-                                    if (client.readyState === WebSocket.OPEN) {
-                                        client.send(JSON.stringify(message));
-                                    }
-                                });
-                            } else {
-                                // Single target
-                                if (targetWs.readyState === WebSocket.OPEN) {
-                                    targetWs.send(JSON.stringify(message));
+                        if (clientType === 'host') {
+                            // Host sending to clients
+                            session.clients.forEach(client => {
+                                if (client.readyState === WebSocket.OPEN) {
+                                    console.log(`Forwarding ${message.type} to client`);
+                                    client.send(JSON.stringify(message));
                                 }
+                            });
+                        } else {
+                            // Client sending to host
+                            if (session.host && session.host.readyState === WebSocket.OPEN) {
+                                console.log(`Forwarding ${message.type} to host`);
+                                session.host.send(JSON.stringify(message));
                             }
                         }
                     }
