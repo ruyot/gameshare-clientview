@@ -93,7 +93,11 @@ class RemoteGameShareClient {
 
             switch (message.type) {
                 case 'joined':
-                    console.log(`Successfully joined session as ${message.client_type}`);
+                    console.log(`✅ Successfully joined session as ${message.client_type}`);
+                    break;
+                case 'join':
+                    console.log(`📢 Another participant joined: ${message.client_type}`);
+                    // Note: Typically the host should handle this to create offers
                     break;
                 case 'offer':
                     await this.handleOffer(message);
@@ -102,10 +106,10 @@ class RemoteGameShareClient {
                     await this.handleIceCandidate(message);
                     break;
                 case 'error':
-                    console.error('Signaling error:', message.message);
+                    console.error('❌ Signaling error:', message.message);
                     break;
                 default:
-                    console.log('Unknown message type:', message.type);
+                    console.log(`🔄 Received message type: ${message.type}`, message);
             }
         } catch (error) {
             console.error('Failed to parse signaling message:', error);

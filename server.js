@@ -53,11 +53,12 @@ wss.on('connection', (ws, req) => {
             const message = JSON.parse(data.toString());
             console.log('Received message:', message);
             
+            // Extract session info for all message types
+            sessionId = message.session_id;
+            clientType = message.client_type;
+
             switch (message.type) {
                 case 'join':
-                    sessionId = message.session_id;
-                    clientType = message.client_type;
-                    
                     // Initialize session if it doesn't exist
                     if (!sessions.has(sessionId)) {
                         sessions.set(sessionId, {
@@ -83,6 +84,24 @@ wss.on('connection', (ws, req) => {
                         session_id: sessionId,
                         client_type: clientType
                     }));
+
+                    // CRITICAL: Forward join message to other participants!
+                    console.log(`Forwarding join message from ${clientType} to other participants`);
+                    if (clientType === 'host') {
+                        // Host joined - forward to all clients
+                        session.clients.forEach(client => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                console.log(`Forwarding host join to client`);
+                                client.send(JSON.stringify(message));
+                            }
+                        });
+                    } else {
+                        // Client joined - forward to host
+                        if (session.host && session.host.readyState === WebSocket.OPEN) {
+                            console.log(`Forwarding client join to host`);
+                            session.host.send(JSON.stringify(message));
+                        }
+                    }
                     break;
                     
                 case 'offer':
@@ -112,7 +131,27 @@ wss.on('connection', (ws, req) => {
                     break;
                     
                 default:
-                    console.log('Unknown message type:', message.type);
+                    console.log(`Forwarding unknown message type "${message.type}" from ${clientType} in session ${sessionId}`);
+                    // Forward ANY unknown message type to other participants
+                    if (sessionId && sessions.has(sessionId)) {
+                        const session = sessions.get(sessionId);
+                        
+                        if (clientType === 'host') {
+                            // Host sending to clients
+                            session.clients.forEach(client => {
+                                if (client.readyState === WebSocket.OPEN) {
+                                    console.log(`Forwarding ${message.type} to client`);
+                                    client.send(JSON.stringify(message));
+                                }
+                            });
+                        } else {
+                            // Client sending to host
+                            if (session.host && session.host.readyState === WebSocket.OPEN) {
+                                console.log(`Forwarding ${message.type} to host`);
+                                session.host.send(JSON.stringify(message));
+                            }
+                        }
+                    }
             }
         } catch (error) {
             console.error('Error processing message:', error);
